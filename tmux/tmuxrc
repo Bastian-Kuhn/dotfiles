@@ -25,4 +25,4 @@ bind l select-pane -R
 
 
 setw -g mouse on
-source-file "/Users/bkuhn/git/dotfiles/tmux/themes/bubbles.conf"
+source-file "$DOTFILES/tmux/themes/bubbles.conf"
