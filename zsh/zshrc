@@ -10,7 +10,7 @@ source ~/git/dotfiles/zsh/powerlevel10k/powerlevel10k.zsh-theme
 
 alias ls='ls -CFb'
 alias la='ls -LaFb'
-alias ll='ls -lFba'
+alias ll='ls -lFba --color'
 alias ve='source ENV/bin/activate'
 setopt histignorealldups #sharehistory
 setopt histignorespace

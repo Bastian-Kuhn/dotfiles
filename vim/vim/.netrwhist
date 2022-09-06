@@ -1,5 +1,6 @@
 let g:netrw_dirhistmax  =10
-let g:netrw_dirhistcnt =2
+let g:netrw_dirhistcnt =3
+let g:netrw_dirhist_3='/Users/bkuhn/.ssh'
 let g:netrw_dirhist_2='/Users/bkuhn/git/dotfiles/vim/vim/bundle/vim-airline'
 let g:netrw_dirhist_1='/Users/bkuhn/git/dotfiles/tmux'
 let g:netrw_dirhist_0='/Users/bkuhn/git/iqos_paid_lending/application/jobs'
@@ -9,4 +10,3 @@ let g:netrw_dirhist_7='/Users/bkuhn/git/bsh-ambassador-admintool/application'
 let g:netrw_dirhist_6='/Users/bkuhn/git/info-buddy'
 let g:netrw_dirhist_5='/Users/bkuhn/git'
 let g:netrw_dirhist_4='/Users/bkuhn/git/docker/typo3'
-let g:netrw_dirhist_3='/Users/bkuhn/git/docker'
