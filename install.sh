@@ -15,5 +15,5 @@ ln -s ~/git/dotfiles/vim/vim .vim
 echo "Setup TMUX"
 cd ~
 rm .tmuxrc
-ln -s ~/git/dotfiles/tmux/tmuxrc .tmuxrc
+ln -s ~/git/dotfiles/tmux/tmux.conf .tmux.conf
 
