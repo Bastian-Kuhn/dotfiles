@@ -12,6 +12,10 @@ set autoread
 set smartindent cinwords=if,elif,else,for,while,try,except,finally,def,class
 inoremap # X<BS>#
 
+set cino=g0
+map \ :wa<CR>:make -j 8 -z 2>/dev/null ; f12<CR>
+map <F12> :wa<CR>:make -j 8 -z 2>/dev/null ; f12<CR>
+imap <F12> <ESC>:wa<CR>:make -j 8 -z 2>/dev/null ; f12<CR>
 
 set fileencodings=ucs-bom,utf-8,latin1
 set ls=2

@@ -1,0 +1,6 @@
+#!/bin/bash
+
+echo "Run F12"
+if test -f ".f12"; then
+    ./.f12
+fi
