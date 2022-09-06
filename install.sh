@@ -17,3 +17,8 @@ cd ~
 rm .tmux.conf
 ln -s ~/git/dotfiles/tmux/tmux.conf .tmux.conf
 
+
+echo "Link bin"
+cd ~
+rm -r ./bin
+ln -s ./git/dotfiles/bin ./bin
