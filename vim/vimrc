@@ -10,7 +10,9 @@ set autoread
 " Einruecken von Python
 " set cindent
 set smartindent cinwords=if,elif,else,for,while,try,except,finally,def,class
-inoremap # X<BS>#
+let python_highlight_builtins = 1
+
+"" inoremap # X<BS>#
 
 set cino=g0
 map \ :wa<CR>:make -j 8 -z 2>/dev/null ; f12<CR>
@@ -61,28 +63,15 @@ autocmd BufRead *.twig set syntax=html filetype=html
 autocmd BufRead *.lektion set syntax=tex filetype=tex
 autocmd BufRead *.omnifocusjs set syntax=javascript filetype=javascript
 
-" Statusbar
-"set laststatus=2
-"set statusline=
-"set statusline+=%-3.3n\                      " buffer number
-"set statusline+=%f\                          " file name
-"set statusline+=%h%m%r%w                     " flags
-"set statusline+=\[%{strlen(&ft)?&ft:'none'}, " filetype
-"set statusline+=%{&encoding},                " encoding
-"set statusline+=%{&fileformat}]              " file format
-"set statusline+=%=                           " right align
-"set statusline+=0x%-8B\                      " current char
-"set statusline+=%-10.(%l,%c%V%)\ %<%P        " offset
-
 " Trailing Spaces hervorheben
 highlight ExtraWhitespace ctermbg=cyan
-
-"highlight IncSearch ctermfg=white ctermbg=red guibg=red
-"highlight Search ctermbg=red ctermfg=white term=bold
-
-" The following alternative may be less obtrusive.
 " Show trailing whitespace:
 autocmd BufWinEnter * match ExtraWhitespace /\s\+$/
+
+highlight IncSearch ctermfg=white ctermbg=red guibg=red
+highlight Search ctermbg=red ctermfg=white term=bold
+
+" The following alternative may be less obtrusive.
 
 " Show trailing whitespace and spaces before a tab:
 match ExtraWhitespace /\s\+$\| \+\ze\t/
@@ -133,30 +122,13 @@ let g:syntastic_javascript_checkers = ['eslint']
 let g:syntastic_javascript_eslint_exe = 'npm run lint --'
 
 
-"set background=dark
-colorscheme onehalfdark
-let g:airline_theme='onehalfdark'
-
-set t_Co=256
-set cursorline
-
-" colorscheme scheakur
-"colorscheme darkblue
-"colorscheme torte
-" colorscheme slate
-" colorscheme morning
-
-if exists('+termguicolors')
-  let &t_8f = "\<Esc>[38;2;%lu;%lu;%lum"
-  let &t_8b = "\<Esc>[48;2;%lu;%lu;%lum"
-  set termguicolors
-endif
+colorscheme gruvbox
+let g:gruvbox_contrast_dark = "hard"
+set background=dark
+let g:airline_theme='gruvbox'
 
 
 
+let g:ctrlp_map = '<c-p>'
 
-nnoremap  <c-j> /<++><CR><Esc>cf>
-noremap <Up> <Nop>
-noremap <Down> <Nop>
-noremap <Left> <Nop>
-noremap <Right> <Nop>
+let g:ctrlp_user_command = ['.git', 'cd %s && git ls-files -co --exclude-standard']
