@@ -8,16 +8,10 @@ set autoread
 
 
 " Einruecken von Python
-" set cindent
 set smartindent cinwords=if,elif,else,for,while,try,except,finally,def,class
 let python_highlight_builtins = 1
 
-"" inoremap # X<BS>#
 
-set cino=g0
-map \ :wa<CR>:make -j 8 -z 2>/dev/null ; f12<CR>
-map <F12> :wa<CR>:make -j 8 -z 2>/dev/null ; f12<CR>
-imap <F12> <ESC>:wa<CR>:make -j 8 -z 2>/dev/null ; f12<CR>
 
 set fileencodings=ucs-bom,utf-8,latin1
 set ls=2
@@ -36,6 +30,11 @@ set softtabstop=4
 set shiftwidth=4
 set expandtab
 set autoindent
+
+set cino=g0
+map \ :wa<CR>:make -j 8 -z 2>/dev/null ; f12<CR>
+map <F12> :wa<CR>:make -j 8 -z 2>/dev/null ; f12<CR>
+imap <F12> <ESC>:wa<CR>:make -j 8 -z 2>/dev/null ; f12<CR>
 
 map <C-h> :call WinMove('h')<cr>
 map <C-j> :call WinMove('j')<cr>
@@ -63,30 +62,12 @@ autocmd BufRead *.twig set syntax=html filetype=html
 autocmd BufRead *.lektion set syntax=tex filetype=tex
 autocmd BufRead *.omnifocusjs set syntax=javascript filetype=javascript
 
-" Trailing Spaces hervorheben
-highlight ExtraWhitespace ctermbg=cyan
-" Show trailing whitespace:
-autocmd BufWinEnter * match ExtraWhitespace /\s\+$/
-
-highlight IncSearch ctermfg=white ctermbg=red guibg=red
-highlight Search ctermbg=red ctermfg=white term=bold
-
-" The following alternative may be less obtrusive.
-
-" Show trailing whitespace and spaces before a tab:
-match ExtraWhitespace /\s\+$\| \+\ze\t/
-
-
-" Faltung von wato.py
+" Folds 
 set foldenable
-" map <F7> :set foldlevel=0<CR>
-" map <F8> :set foldlevel=1<CR>
-" set foldmethod=marker
-" set foldmarker=#\ \ \ .,#.
 map <F7> :set foldlevel=0<CR>
 map <F8> :set foldlevel=1<CR>
-" set foldmethod=expr
-" set foldexpr=GetPotionFold(v:lnum)
+set foldmethod=marker
+set foldmarker=#\ \ \ .,#.
 
 
 " Zeile vom letzten mal merken
@@ -96,9 +77,6 @@ autocmd BufReadPost *
  \ endif
 
 
-" Markieren langer zeilen
-highlight ColorColumn ctermbg=magenta
-call matchadd('ColorColumn', '\%101v', 80)
 
 " Commands
 com! FormatJSON %!python -m json.tool
@@ -111,7 +89,7 @@ set list
 execute pathogen#infect()
 set statusline+=%#warningmsg#
 set statusline+=%{SyntasticStatuslineFlag()}
-set statusline+=%*
+set statusline+=%* 
 
 let g:syntastic_always_populate_loc_list = 1
 let g:syntastic_auto_loc_list = 1
@@ -130,5 +108,14 @@ let g:airline_theme='gruvbox'
 
 
 let g:ctrlp_map = '<c-p>'
-
 let g:ctrlp_user_command = ['.git', 'cd %s && git ls-files -co --exclude-standard']
+
+" Markieren langer zeilen
+highlight ColorColumn ctermbg=yellow
+call matchadd('ColorColumn', '\%102v', 102)
+
+" Show trailing whitepace and spaces before a tab:
+highlight ExtraWhitespace ctermbg=magenta guibg=magenta
+match ExtraWhitespace /\s\+$/
+
+
