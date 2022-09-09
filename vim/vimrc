@@ -5,13 +5,9 @@ set ignorecase
 set clipboard=unnamed
 set autoread
 
-
-
 " Einruecken von Python
 set smartindent cinwords=if,elif,else,for,while,try,except,finally,def,class
 let python_highlight_builtins = 1
-
-
 
 set fileencodings=ucs-bom,utf-8,latin1
 set ls=2
@@ -106,7 +102,6 @@ set background=dark
 let g:airline_theme='gruvbox'
 
 
-
 let g:ctrlp_map = '<c-p>'
 let g:ctrlp_user_command = ['.git', 'cd %s && git ls-files -co --exclude-standard']
 
@@ -117,5 +112,4 @@ call matchadd('ColorColumn', '\%102v', 102)
 " Show trailing whitepace and spaces before a tab:
 highlight ExtraWhitespace ctermbg=magenta guibg=magenta
 match ExtraWhitespace /\s\+$/
-
-
+set cursorline
