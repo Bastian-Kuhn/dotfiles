@@ -12,7 +12,7 @@ alias ls='ls -CFb'
 alias la='ls -LaFb'
 alias ll='ls -lFba --color'
 alias ve='source ENV/bin/activate'
-alias bve='python3.8 -m venv ENV'
+alias bve='python3.8 -m venv ENV && source ENV/bin/activate'
 setopt histignorealldups #sharehistory
 setopt histignorespace
 
