@@ -20,3 +20,7 @@ ln -s ~/git/dotfiles/bin ~/bin
 echo "Setup ZSH"
 rm ~/.zshrc
 ln -s ~/git/dotfiles/zsh/zshrc ~/.zshrc
+
+echo "Setup p10k"
+rm ~/.p10k.zsh
+ln -s ~/git/dotfiles/zsh/p10k.zsh ~/.p10k.zsh

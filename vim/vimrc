@@ -32,6 +32,7 @@ map \ :wa<CR>:make -j 8 -z 2>/dev/null ; f12<CR>
 map <F12> :wa<CR>:make -j 8 -z 2>/dev/null ; f12<CR>
 imap <F12> <ESC>:wa<CR>:make -j 8 -z 2>/dev/null ; f12<CR>
 
+
 map <C-h> :call WinMove('h')<cr>
 map <C-j> :call WinMove('j')<cr>
 map <C-k> :call WinMove('k')<cr>
@@ -64,6 +65,10 @@ map <F7> :set foldlevel=0<CR>
 map <F8> :set foldlevel=1<CR>
 set foldmethod=marker
 set foldmarker=#\ \ \ .,#.
+
+" Save folding on open/close vim
+autocmd BufWinLeave *.* mkview
+autocmd BufWinEnter *.* silent loadview 
 
 
 " Zeile vom letzten mal merken
