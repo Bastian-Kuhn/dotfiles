@@ -12,7 +12,7 @@ alias ls='ls -CFb'
 alias la='ls -LaFb'
 alias ll='ls -lFba --color'
 alias ve='source ENV/bin/activate'
-alias bve='python3.8 -m venv ENV && source ENV/bin/activate'
+alias bve='python3 -m venv ENV && source ENV/bin/activate'
 setopt histignorealldups #sharehistory
 setopt histignorespace
 
@@ -53,3 +53,7 @@ export DOTFILES=$HOME/git/dotfiles
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+
+if [[ -f ~/.zprofile ]]; then
+    source ~/.zprofile
+fi
