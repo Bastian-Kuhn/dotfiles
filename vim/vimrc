@@ -103,6 +103,7 @@ let g:syntastic_javascript_eslint_exe = 'npm run lint --'
 
 colorscheme gruvbox
 let g:gruvbox_contrast_light = "hard"
+let g:gruvbox_invert_tabline = 1
 set background=light
 let g:airline_theme='gruvbox'
 
