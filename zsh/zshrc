@@ -59,6 +59,10 @@ export DOTFILES=$HOME/git/dotfiles
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 
+bwu(){
+    export BW_SESSION=$(bw unlock --raw $1)
+}
+
 if [[ -f ~/.zprofile ]]; then
     source ~/.zprofile
 fi
