@@ -27,6 +27,8 @@ set shiftwidth=4
 set expandtab
 set autoindent
 
+set relativenumber
+
 set cino=g0
 map \ :wa<CR>:make -j 8 -z 2>/dev/null ; f12<CR>
 map <F12> :wa<CR>:make -j 8 -z 2>/dev/null ; f12<CR>
