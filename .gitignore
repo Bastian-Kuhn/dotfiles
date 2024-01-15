@@ -1,5 +1,6 @@
 *.swp
 *.netrwhist
 vim/vim/view/*
+vim/vim/plugged/*
 .DS_Store
 *.git

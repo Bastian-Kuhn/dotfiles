@@ -1,0 +1,7 @@
+{
+    //"suggest.autoTrigger": "none",
+    "pyright.disableDiagnostics": true,
+    "pyright.disableDocumentation": true,
+    "inlayHint.display": false
+
+}
