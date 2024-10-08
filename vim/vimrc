@@ -150,3 +150,6 @@ inoremap <silent><expr> <Tab>
 " <C-g>u breaks current undo, please make your own choice.
 inoremap <silent><expr> <CR> coc#pum#visible() ? coc#pum#confirm()
                               \: "\<C-g>u\<CR>\<c-r>=coc#on_enter()\<CR>"
+" Fix Background
+let g:clear_background=0
+execute 'colorscheme ' . g:colors_name
