@@ -1,7 +1,8 @@
 {
-    //"suggest.autoTrigger": "none",
     "pyright.disableDiagnostics": true,
     "pyright.disableDocumentation": true,
-    "inlayHint.display": false
+    "inlayHint.display": false,
+    "python.analysis.autoImportCompletions": false,
+    "pyright.organizeimports": false
 
 }

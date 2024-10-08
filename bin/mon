@@ -1,0 +1,28 @@
+#!/bin/bash
+# Monitor Helper
+# .local.
+case "$1" in
+"start")
+    echo "Sart Container"
+    docker start monitoring
+    ;;
+"stop")
+    echo "Stop Container"
+    docker stop monitoring
+    ;;
+"logs")
+    docker logs -f monitoring
+    ;;
+"shell")
+    echo "Open Shell"
+    docker exec -it monitoring bash -c 'su - cmk'
+    ;;
+"status")
+    echo "Open Shell"
+    docker exec -it monitoring bash -c 'omd status'
+    ;;
+"root")
+    echo "Open Shell"
+    docker exec -it monitoring bash
+    ;;
+esac
