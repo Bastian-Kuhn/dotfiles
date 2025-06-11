@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+
+if [ -z "$1" ]; then
+    echo "Usage: $0 <plugin_name>"
+    exit 1
+fi
+
+docker cp monitoring:/opt/omd/sites/cmk/local/lib/python3/cmk_addons/plugins/$1/ /media/psf/Home/git/Checkmk-Checks/$1/src
