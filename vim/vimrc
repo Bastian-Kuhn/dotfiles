@@ -112,13 +112,6 @@ let g:airline_theme='gruvbox'
 let g:ctrlp_map = '<c-p>'
 let g:ctrlp_user_command = ['.git', 'cd %s && git ls-files -co --exclude-standard']
 
-" Markieren langer zeilen
-highlight ColorColumn ctermbg=yellow
-call matchadd('ColorColumn', '\%102v', 102)
-
-" Show trailing whitepace and spaces before a tab:
-highlight ExtraWhitespace ctermbg=magenta guibg=magenta
-match ExtraWhitespace /\s\+$/
 set cursorline
 
 
@@ -153,3 +146,10 @@ inoremap <silent><expr> <CR> coc#pum#visible() ? coc#pum#confirm()
 " Fix Background
 let g:clear_background=0
 execute 'colorscheme ' . g:colors_name
+" Markieren langer zeilen
+highlight ColorColumn ctermbg=yellow
+call matchadd('ColorColumn', '\%102v', 102)
+
+" Show trailing whitepace and spaces before a tab:
+highlight ExtraWhitespace ctermbg=red guibg=red
+match ExtraWhitespace /\s\+$/
