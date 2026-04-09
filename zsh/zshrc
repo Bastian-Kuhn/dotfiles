@@ -66,3 +66,7 @@ bwu(){
 if [[ -f ~/.zprofile ]]; then
     source ~/.zprofile
 fi
+
+test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
+
+export PATH="$HOME/.local/bin:$PATH"

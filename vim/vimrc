@@ -105,7 +105,7 @@ let g:syntastic_javascript_eslint_exe = 'npm run lint --'
 colorscheme gruvbox
 let g:gruvbox_contrast_light = "hard"
 let g:gruvbox_invert_tabline = 1
-set background=light
+set background=dark
 let g:airline_theme='gruvbox'
 
 
@@ -113,7 +113,6 @@ let g:ctrlp_map = '<c-p>'
 let g:ctrlp_user_command = ['.git', 'cd %s && git ls-files -co --exclude-standard']
 
 set cursorline
-
 
 " Terminal
 set termwinsize=15x0
@@ -153,3 +152,11 @@ call matchadd('ColorColumn', '\%102v', 102)
 " Show trailing whitepace and spaces before a tab:
 highlight ExtraWhitespace ctermbg=red guibg=red
 match ExtraWhitespace /\s\+$/
+
+" Tune Black Gruvebox
+highlight Cursor guifg=white guibg=black
+highlight iCursor guifg=white guibg=steelblue
+set guicursor=n-v-c:block-Cursor
+set guicursor+=i:ver100-iCursor
+set guicursor+=n-v-c:blinkon0
+set guicursor+=i:blinkwait10
