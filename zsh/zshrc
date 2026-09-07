@@ -6,7 +6,7 @@ if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]
 fi
 
 # Set up the prompt
-source ~/git/dotfiles/zsh/powerlevel10k/powerlevel10k.zsh-theme
+source ${${(%):-%N}:A:h}/powerlevel10k/powerlevel10k.zsh-theme
 
 alias ls='ls -CFb'
 alias la='ls -LaFb'
@@ -57,7 +57,7 @@ zstyle ':completion:*:(ssh|scp|rsync):*:hosts-ipaddr' ignored-patterns '^(<->.<-
 autoload -Uz compinit && compinit -i
 
 export PATH=$PATH:$HOME/bin
-export DOTFILES=$HOME/git/dotfiles
+export DOTFILES=${${(%):-%N}:A:h:h}
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
