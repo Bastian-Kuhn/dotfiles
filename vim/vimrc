@@ -1,5 +1,16 @@
-filetype off                  " required
-syntax on
+" Must come first: line continuations below need it (vim -es starts compatible)
+set nocompatible
+
+" Plugins (vim-plug). plug#end() also runs `filetype plugin indent on` and
+" `syntax enable`, so neither is set separately.
+call plug#begin()
+Plug 'neoclide/coc.nvim', {'branch': 'release'}
+" Vendored in ~/.vim/bundle (formerly loaded by pathogen), used as local plugins
+Plug '~/.vim/bundle/gruvbox'
+Plug '~/.vim/bundle/vim-airline'
+Plug '~/.vim/bundle/vim-fugitive'
+call plug#end()
+" ctrlp and nerdtree load natively from ~/.vim/pack/*/start
 
 set ignorecase
 set autoread
@@ -12,7 +23,6 @@ set fileencodings=ucs-bom,utf-8,latin1
 set ls=2
 set ruler
 set showmode
-set nocompatible
 set sidescroll=1
 set sidescrolloff=10
 set nolinebreak
@@ -66,10 +76,6 @@ map <F8> :set foldlevel=1<CR>
 set foldmethod=marker
 set foldmarker=#\ \ \ .,#.
 
-" Save folding on open/close vim
-autocmd BufWinLeave *.* mkview
-autocmd BufWinEnter *.* silent loadview 
-
 
 " Zeile vom letzten mal merken
 autocmd BufReadPost *
@@ -80,26 +86,11 @@ autocmd BufReadPost *
 
 
 " Commands
-com! FormatJSON %!python -m json.tool
+com! FormatJSON %!python3 -m json.tool
 com! R %!reload-browser firefox
 
 set listchars=tab:>·,extends:>,precedes:<
 set list
-
-" Plugins
-execute pathogen#infect()
-set statusline+=%#warningmsg#
-set statusline+=%{SyntasticStatuslineFlag()}
-set statusline+=%* 
-
-let g:syntastic_always_populate_loc_list = 1
-let g:syntastic_auto_loc_list = 1
-let g:syntastic_check_on_open = 0
-let g:syntastic_check_on_wq = 0
-
-let g:syntastic_javascript_checkers = ['eslint']
-let g:syntastic_javascript_eslint_exe = 'npm run lint --'
-
 
 colorscheme gruvbox
 let g:gruvbox_contrast_light = "hard"
@@ -119,12 +110,7 @@ set splitbelow
 set relativenumber
 
 
-filetype plugin on
 set omnifunc=syntaxcomplete#Complete
-
-call plug#begin()
-Plug 'neoclide/coc.nvim', {'branch': 'release'}
-call plug#end()
 
 " use <tab> to trigger completion and navigate to the next complete item
 function! CheckBackspace() abort
