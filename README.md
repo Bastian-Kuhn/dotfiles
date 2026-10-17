@@ -4,8 +4,9 @@ After some Inspiration in Youtube I created my own dotfiles which I can deploy o
 
 
 It's basically for my own use. 
-Attention: The install.sh script removes without asking config files and folders and replaces them with symlinks.
-Removed are .vimrc, .vim, .tmux.conf, .zshrc and ~/bin (List may incomplete, check script)
+The install.sh script replaces config files and folders with symlinks into this repo.
+Existing targets (.vimrc, .vim, .tmux.conf, .zshrc, .zprofile, .p10k.zsh, ~/bin) are not deleted
+but moved to <name>.bak-<date> first; links that are already correct are left alone.
 
 
 ## Hints:

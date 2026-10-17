@@ -9,40 +9,53 @@ case "${unameOut}" in
     *)          machine="UNKNOWN:${unameOut}"
 esac
 
+DOTFILES=~/git/dotfiles
+STAMP=$(date +%Y%m%d-%H%M%S)
+
+# link <source> <target>
+# Nothing is deleted: an existing target is moved to <target>.bak-<date> first.
+# A target that already links to the source is left alone.
+link() {
+    local src=$1 target=$2
+    if [ -L "$target" ] && [ "$(readlink "$target")" = "$src" ]; then
+        echo "  ok      $target"
+        return
+    fi
+    if [ -e "$target" ] || [ -L "$target" ]; then
+        mv "$target" "$target.bak-$STAMP"
+        echo "  backup  $target -> $target.bak-$STAMP"
+    fi
+    mkdir -p "$(dirname "$target")"
+    ln -s "$src" "$target"
+    echo "  linked  $target -> $src"
+}
+
 
 echo "Setup VIM"
-rm ~/.vimrc
-rm -r ~/.vim
-ln -s ~/git/dotfiles/vim/vimrc ~/.vimrc
-ln -s ~/git/dotfiles/vim/vim ~/.vim
+link $DOTFILES/vim/vimrc ~/.vimrc
+link $DOTFILES/vim/vim ~/.vim
 
 
 echo "Setup TMUX"
-rm ~/.tmux.conf
-ln -s ~/git/dotfiles/tmux/tmux.conf ~/.tmux.conf
+link $DOTFILES/tmux/tmux.conf ~/.tmux.conf
 
 
 echo "Link bin"
-rm -r ~/bin
-ln -s ~/git/dotfiles/bin ~/bin
+link $DOTFILES/bin ~/bin
 
 
 echo "Setup ZSH"
-rm ~/.zshrc
-ln -s ~/git/dotfiles/zsh/zshrc ~/.zshrc
-ln -s ~/git/dotfiles/zsh/zprofile ~/.zprofile
+link $DOTFILES/zsh/zshrc ~/.zshrc
+link $DOTFILES/zsh/zprofile ~/.zprofile
 
 echo "Setup p10k"
-rm ~/.p10k.zsh
-ln -s ~/git/dotfiles/zsh/p10k.zsh ~/.p10k.zsh
+link $DOTFILES/zsh/p10k.zsh ~/.p10k.zsh
 
 if [ "$machine" == "Linux" ]; then
     echo "Setup Awesome"
-    rm ~/.config/awesome
-    ln -s ~/git/dotfiles/awesome ~/.config/awesome
+    link $DOTFILES/awesome ~/.config/awesome
 
     echo "Setup Terminator"
-    rm -r ~/.config/terminator
-    ln -s ~/git/dotfiles/terminator ~/.config/terminator
+    link $DOTFILES/terminator ~/.config/terminator
 
 fi
