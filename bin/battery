@@ -1,3 +1,22 @@
 #!/usr/bin/env bash
+# Battery level with a Nerd Font icon for the tmux status line.
+# Icon follows the charge in 10 % steps; a bolt while charging, a plug when on AC and full.
 
-pmset -g batt | egrep "([0-9]+\%).*" -o --colour=auto | cut -f1 -d';'
+info=$(pmset -g batt)
+pct=$(grep -Eo '[0-9]+%' <<<"$info" | head -1 | tr -d '%')
+[ -z "$pct" ] && exit 0   # no battery (desktop Mac)
+
+icons=("󰁺" "󰁻" "󰁼" "󰁽" "󰁾" "󰁿" "󰂀" "󰂁" "󰂂" "󰁹")
+idx=$(( (pct - 1) / 10 )); (( idx < 0 )) && idx=0; (( idx > 9 )) && idx=9
+icon=${icons[$idx]}
+(( pct < 5 )) && icon="󰂎"
+
+if grep -q 'AC Power' <<<"$info"; then
+  if grep -qE 'charging|finishing charge' <<<"$info" && ! grep -q 'discharging' <<<"$info"; then
+    icon="󰂄"
+  else
+    icon="󰚥"
+  fi
+fi
+
+printf '%s %s%%' "$icon" "$pct"
