@@ -19,4 +19,5 @@ free=$(vm_stat | awk -v t="$total" '
   /occupied by compressor/  {c=$5}
   END {printf "%.1fG", (t - (a+w+c)*ps)/1073741824}')
 
-printf '󰻠 %s%%  󰓅 %s  󰍛 %s' "$cpu" "$load" "$free"
+L='#[fg=colour244]'; V='#[fg=colour250]'
+printf '%scpu %s%s%%  %sload %s%s  %sfree %s%s#[fg=colour246]' "$L" "$V" "$cpu" "$L" "$V" "$load" "$L" "$V" "$free"
