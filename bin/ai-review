@@ -1,0 +1,335 @@
+#!/usr/bin/env python3
+"""ai-review: what did AI hand back for review?
+
+Lists the open Cairn tasks tagged "Review AI Work" with the age of the
+latest Claude comment and the repo it touched. Read only: nothing on
+Cairn is changed by this tool.
+
+  ai-review            fzf picker (plain list without fzf or without a tty)
+  ai-review --print    plain list
+  ai-review --show ID  render the latest Claude comment of a task
+  ai-review --open ID  open the task in the browser
+  ai-review --vim ID   open vim in the repo on the commits the comment names
+
+Keys in the picker:
+  enter   open the task in the browser
+  ctrl-o  vim on the referenced commits (:Review), or on unpushed work
+  ctrl-g  lazygit in the referenced repo
+  ctrl-r  reload from Cairn
+  esc     quit
+
+Credentials: ~/.config/cairn/config.json (written by `cairn login`),
+overridden by $CAIRN_HOST (or $CAIRN_URL) and $CAIRN_TOKEN.
+Repos searched for commit hashes: $AI_REPOS (space separated, below ~/git),
+default "cairn Checkmk-Checks cmdbsyncer fmg-checks dotfiles".
+"""
+import concurrent.futures
+import datetime as dt
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+import textwrap
+import urllib.error
+import urllib.parse
+import urllib.request
+
+TAG = "Review AI Work"
+AI_AUTHOR = "claude"
+GIT_BASE = os.path.expanduser("~/git")
+REPOS = os.environ.get(
+    "AI_REPOS", "cairn Checkmk-Checks cmdbsyncer fmg-checks dotfiles").split()
+# Cairn tag (lower case) -> repo, for tasks whose comment names no commit
+TAG_REPO = {
+    "cairn": "cairn",
+    "checkmk-checks": "Checkmk-Checks",
+    "cmdbsyncer": "cmdbsyncer",
+    "fmg-checks": "fmg-checks",
+    "dotfiles": "dotfiles",
+}
+HASH_RE = re.compile(r"(?<![0-9A-Za-z/._-])[0-9a-f]{7,40}(?![0-9A-Za-z_-])")
+CACHE = os.path.join(tempfile.gettempdir(), f"ai-review-{os.getuid()}.json")
+
+TTY = sys.stdout.isatty() or "FZF_PREVIEW_COLUMNS" in os.environ
+BOLD, DIM, YEL, GRN, CYA, RST = (
+    ("\033[1m", "\033[2m", "\033[33m", "\033[32m", "\033[36m", "\033[0m")
+    if TTY else ("",) * 6)
+
+
+# ---- Cairn API (read only) ----
+
+def _config():
+    path = os.path.join(
+        os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config"),
+        "cairn", "config.json")
+    try:
+        with open(path, encoding="utf-8") as fh:
+            cfg = json.load(fh)
+    except (OSError, ValueError):
+        cfg = {}
+    host = (os.environ.get("CAIRN_HOST") or os.environ.get("CAIRN_URL")
+            or cfg.get("host") or "https://app.cairn-app.de").rstrip("/")
+    token = os.environ.get("CAIRN_TOKEN") or cfg.get("token")
+    if not token:
+        sys.exit("ai-review: no Cairn token, run `cairn login` or set CAIRN_TOKEN")
+    return host, token
+
+
+def _get(host, token, path, params=None):
+    url = f"{host}/api/v1{path}"
+    if params:
+        url += "?" + urllib.parse.urlencode(params)
+    req = urllib.request.Request(url, headers={
+        "Accept": "application/json", "Authorization": f"Bearer {token}"})
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            return json.load(resp)
+    except urllib.error.HTTPError as exc:
+        sys.exit(f"ai-review: Cairn answered HTTP {exc.code} for {path}")
+    except urllib.error.URLError as exc:
+        sys.exit(f"ai-review: cannot reach {host}: {exc.reason}")
+
+
+# ---- data ----
+
+def _is_ai(comment):
+    author = comment.get("author") or {}
+    return (author.get("username") or comment.get("author_name") or "").lower() == AI_AUTHOR
+
+
+def _repo_has(repo, sha):
+    path = os.path.join(GIT_BASE, repo)
+    if not os.path.isdir(path):
+        return False
+    return subprocess.run(
+        ["git", "-C", path, "cat-file", "-e", f"{sha}^{{commit}}"],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
+
+
+def _analyse(task):
+    """Latest AI comment, referenced commits and the repo they live in."""
+    ai = [c for c in task.get("comments") or [] if _is_ai(c)]
+    last = ai[-1] if ai else None
+    body = (last or {}).get("body") or ""
+    # a real hash mixes digits and letters; skips dates and plain numbers
+    hashes = [h for h in dict.fromkeys(HASH_RE.findall(body))
+              if re.search(r"[a-f]", h) and re.search(r"[0-9]", h)]
+    found, repo = [], None
+    for sha in hashes:
+        for r in ([repo] if repo else []) + [r for r in REPOS if r != repo]:
+            if _repo_has(r, sha):
+                repo = repo or r
+                if r == repo:
+                    found.append(sha)
+                break
+    if not repo:
+        for tag in task.get("tags") or []:
+            repo = TAG_REPO.get(tag.lower())
+            if repo:
+                break
+    if not repo:
+        for r in REPOS:
+            if re.search(rf"\b{re.escape(r)}\b", body, re.I):
+                repo = r
+                break
+    comments = task.get("comments") or []
+    newest = comments[-1] if comments else None
+    return {
+        "id": task["id"],
+        "title": task.get("title") or "",
+        "status": task.get("status") or "",
+        "tags": [t for t in task.get("tags") or [] if t != TAG],
+        "ai_at": (last or {}).get("created_at") or task.get("last_comment_at"),
+        "ai_body": body,
+        "newer_by": (newest.get("author_name")
+                     if newest and last and newest is not last else None),
+        "hashes": hashes,
+        "commits": found,
+        "repo": repo,
+    }
+
+
+def load(refresh=True):
+    if not refresh:
+        try:
+            with open(CACHE, encoding="utf-8") as fh:
+                return json.load(fh)
+        except (OSError, ValueError):
+            pass
+    host, token = _config()
+    items = _get(host, token, "/tasks", {
+        "tag": TAG, "open": "true", "compact": "true", "limit": 200}).get("items", [])
+    items = [t for t in items if TAG in (t.get("tags") or [])]
+    with concurrent.futures.ThreadPoolExecutor(8) as pool:
+        tasks = list(pool.map(lambda t: _get(host, token, f"/tasks/{t['id']}"), items))
+    rows = [_analyse(t) for t in tasks]
+    rows.sort(key=lambda r: r["ai_at"] or "", reverse=True)
+    data = {"host": host, "rows": rows}
+    fd = os.open(CACHE, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as fh:
+        json.dump(data, fh)
+    return data
+
+
+def _row(data, task_id):
+    for r in data["rows"]:
+        if r["id"] == task_id or r["id"].endswith(task_id):
+            return r
+    sys.exit(f"ai-review: task {task_id} not in the review list")
+
+
+# ---- output ----
+
+def _age(iso):
+    if not iso:
+        return "?"
+    when = dt.datetime.fromisoformat(iso)
+    if when.tzinfo is None:
+        when = when.replace(tzinfo=dt.timezone.utc)
+    secs = (dt.datetime.now(dt.timezone.utc) - when).total_seconds()
+    for unit, size in (("d", 86400), ("h", 3600), ("m", 60)):
+        if secs >= size:
+            return f"{int(secs // size)}{unit}"
+    return "now"
+
+
+def _line(r):
+    flag = "*" if r["newer_by"] else " "
+    return (f"{r['id'][-6:]}  {_age(r['ai_at']):>4}{flag} "
+            f"{(r['repo'] or '-'):<15} {r['title']}")
+
+
+def cmd_print(data):
+    if not data["rows"]:
+        print("Nothing to review.")
+        return
+    print(f"{BOLD}{'ID':<6}  {'AGE':>4}  {'REPO':<15} TITLE{RST}")
+    for r in data["rows"]:
+        print(_line(r))
+    print(f"{DIM}{len(data['rows'])} tasks tagged '{TAG}'"
+          f"  (* = newer reply after the AI comment){RST}")
+
+
+def _render(body, width):
+    out = []
+    for para in body.replace("\r\n", "\n").split("\n"):
+        para = re.sub(r"\*\*(.+?)\*\*", rf"{BOLD}\1{RST}", para)
+        m = re.match(r"^(\s*(?:[-*]|\d+\.)\s+|#+\s*)", para)
+        lead = m.group(1) if m else ""
+        if lead.startswith("#"):
+            out.append(f"{BOLD}{para[len(lead):]}{RST}")
+            continue
+        wrapped = textwrap.wrap(para, width=width, subsequent_indent=" " * len(lead),
+                                break_long_words=False, break_on_hyphens=False)
+        out.extend(wrapped or [""])
+    text = "\n".join(out)
+    return HASH_RE.sub(lambda m: f"{YEL}{m.group(0)}{RST}", text)
+
+
+def cmd_show(data, task_id):
+    r = _row(data, task_id)
+    width = max(40, int(os.environ.get("FZF_PREVIEW_COLUMNS", "100")) - 2)
+    print(f"{BOLD}{r['title']}{RST}")
+    print(f"{DIM}status {r['status']}  tags {', '.join(r['tags']) or '-'}"
+          f"  AI comment {_age(r['ai_at'])} ago{RST}")
+    if r["commits"]:
+        print(f"{GRN}commits in {r['repo']}: {' '.join(r['commits'])}{RST}")
+    elif r["hashes"]:
+        print(f"{YEL}hashes not found locally: {' '.join(r['hashes'])}"
+              f" (git fetch?){RST}")
+    elif r["repo"]:
+        print(f"{DIM}no commit named, repo guess: {r['repo']}{RST}")
+    if r["newer_by"]:
+        print(f"{YEL}newer comment by {r['newer_by']} after the AI comment{RST}")
+    print("-" * min(width, 80))
+    print(_render(r["ai_body"] or "(no AI comment)", width))
+
+
+def cmd_open(data, task_id):
+    r = _row(data, task_id)
+    opener = "open" if sys.platform == "darwin" else "xdg-open"
+    subprocess.run([opener, f"{data['host']}/tasks/{r['id']}"], check=False)
+
+
+def _repo_dir(r):
+    if not r["repo"]:
+        print("ai-review: no repo found for this task", file=sys.stderr)
+        return None
+    return os.path.join(GIT_BASE, r["repo"])
+
+
+def cmd_vim(data, task_id):
+    r = _row(data, task_id)
+    path = _repo_dir(r)
+    if not path:
+        input("press enter ")
+        return
+    commits = r["commits"]
+    if commits:
+        # oldest first, so the review spans all named commits
+        order = subprocess.run(
+            ["git", "-C", path, "rev-list", "--topo-order", "--reverse", "--no-walk",
+             *commits], capture_output=True, text=True).stdout.split()
+        oldest, newest = order[0], order[-1]
+        cmd = f"Review {oldest}~1 {newest}"
+    else:
+        cmd = "Review"
+    editor = "vim" if shutil.which("vim") else os.environ.get("EDITOR", "vi")
+    subprocess.run([editor, "-c", cmd], cwd=path, check=False)
+
+
+def cmd_lazygit(data, task_id):
+    path = _repo_dir(_row(data, task_id))
+    if path:
+        subprocess.run(["lazygit", "-p", path], check=False)
+
+
+def cmd_pick(data):
+    if not data["rows"]:
+        print("Nothing to review.")
+        return
+    me = os.path.abspath(sys.argv[0])
+    lines = "\n".join(f"{r['id']}\t{_line(r)}" for r in data["rows"])
+    header = ("enter browser | ctrl-o vim review | ctrl-g lazygit"
+              " | ctrl-r reload | esc quit\n"
+              f"{'ID':<6}  {'AGE':>4}  {'REPO':<15} TITLE")
+    subprocess.run([
+        "fzf", "--ansi", "--delimiter=\t", "--with-nth=2..", "--no-sort",
+        "--layout=reverse", "--header", header, "--header-first",
+        "--prompt", "AI review > ",
+        "--preview", f"'{me}' --show {{1}}",
+        "--preview-window", "right,60%,wrap,<120(down,60%,wrap)",
+        "--bind", f"enter:execute-silent('{me}' --open {{1}})",
+        "--bind", f"ctrl-o:execute('{me}' --vim {{1}})",
+        "--bind", f"ctrl-g:execute('{me}' --lazygit {{1}})",
+        "--bind", f"ctrl-r:reload('{me}' --lines)",
+    ], input=lines, text=True, check=False)
+
+
+def main(argv):
+    args = argv[1:]
+    if args and args[0] in ("-h", "--help"):
+        print(__doc__.strip())
+        return
+    if args and args[0] in ("--show", "--open", "--vim", "--lazygit"):
+        if len(args) < 2:
+            sys.exit(f"ai-review: {args[0]} needs a task id")
+        data = load(refresh=False)
+        {"--show": cmd_show, "--open": cmd_open, "--vim": cmd_vim,
+         "--lazygit": cmd_lazygit}[args[0]](data, args[1])
+        return
+    data = load()
+    if args and args[0] == "--lines":
+        for r in data["rows"]:
+            print(f"{r['id']}\t{_line(r)}")
+    elif args and args[0] == "--print" or not shutil.which("fzf") or not sys.stdout.isatty():
+        cmd_print(data)
+    else:
+        cmd_pick(data)
+
+
+if __name__ == "__main__":
+    main(sys.argv)
