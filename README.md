@@ -31,6 +31,23 @@ but moved to <name>.bak-<date> first; links that are already correct are left al
 - zsh: p10k shell
 - zsh: Shell shows git branches, virtual envs etc
 
+## AI review workflow
+Tools: `brew install fzf git-delta lazygit`. Delta is the git pager (set in ~/.gitconfig, not in this repo).
+
+- `ai-session [repo]`: tmux session for a repo (name below ~/git or path): claude left, vim right, shell below. Reuses an existing session.
+- `ai-review`: Cairn tasks tagged "Review AI Work" (read only). Preview shows the latest Claude comment.
+  Keys: enter opens the task in the browser, ctrl-o opens vim `:Review` on the commits named in the comment
+  (or on the unpushed work of the repo), ctrl-g lazygit, ctrl-r reload. `ai-review --print` for a plain list.
+- `ai-changes`: per repo branch, to push, behind, uncommitted files and unpushed commits.
+  `--fetch` fetches first, `--pick` is an fzf picker (enter vim `:Review`, ctrl-g lazygit). Repos: `$AI_REPOS`.
+- tmux: `prefix g` lazygit, `prefix R` ai-review, `prefix A` ai-changes --pick (all as popups).
+- vim (leader is space): `:Review [base] [head]` puts every changed file into the quickfix list and shows a
+  side by side diff per file, `]q`/`[q` next/previous file, `<leader>gq` ends it. Default base is `@{u}`
+  (else HEAD~1) against the work tree. `<leader>gs` status, `<leader>gd` diff file, `<leader>gD` diff file vs
+  upstream, `<leader>gl` file log, `<leader>gL` repo log, `<leader>gb` blame, `<leader>gr` :Review,
+  `]h`/`[h` next/previous hunk, `<leader>hp` preview, `<leader>hu` undo, `<leader>hs` stage hunk.
+- zsh: `gd` diff, `gds` staged diff, `gdu` diff against upstream, `glu` unpushed commits.
+
 ## Notes
 - https://github.com/sonph/onehalf (Colorshemes)
 - https://github.com/nicknisi/dotfiles
