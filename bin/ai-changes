@@ -1,0 +1,114 @@
+#!/usr/bin/env bash
+# ai-changes: what is still waiting for review or push in my repos.
+#
+#   ai-changes            status of every repo (branch, ahead/behind, dirty files, unpushed commits)
+#   ai-changes --fetch    git fetch first, so behind counts are current
+#   ai-changes --pick     fzf over the repos with changes; preview = diff,
+#                         enter: vim :Review in that repo, ctrl-g: lazygit
+#   ai-changes REPO...    only these repos (names below ~/git or paths)
+#
+# Repos: $AI_REPOS (space separated, below ~/git),
+# default "cairn Checkmk-Checks cmdbsyncer fmg-checks dotfiles". Read only.
+
+GIT_BASE=~/git
+REPOS=(${AI_REPOS:-cairn Checkmk-Checks cmdbsyncer fmg-checks dotfiles})
+FETCH=0
+PICK=0
+ONLY=()
+
+for arg in "$@"; do
+    case $arg in
+        --fetch) FETCH=1 ;;
+        --pick) PICK=1 ;;
+        -h|--help) sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        *) ONLY+=("$arg") ;;
+    esac
+done
+[ ${#ONLY[@]} -gt 0 ] && REPOS=("${ONLY[@]}")
+
+if [ -t 1 ] || [ -n "$FORCE_COLOR" ]; then
+    B=$'\e[1m' D=$'\e[2m' R=$'\e[31m' G=$'\e[32m' Y=$'\e[33m' C=$'\e[36m' N=$'\e[0m'
+    COLOR=always
+else
+    B= D= R= G= Y= C= N=
+    COLOR=never
+fi
+
+repo_dir() {
+    case $1 in
+        /*|./*|../*|~*) echo "$1" ;;
+        *) echo "$GIT_BASE/$1" ;;
+    esac
+}
+
+# report <dir>: prints the block for one repo, returns 0 if something is pending
+report() {
+    local dir=$1 name branch upstream ahead=0 behind=0 dirty pending=1
+    name=$(basename "$dir")
+    if ! git -C "$dir" rev-parse --git-dir >/dev/null 2>&1; then
+        echo "${B}${name}${N}  ${D}not a git repo${N}"
+        return 1
+    fi
+    [ "$FETCH" = 1 ] && git -C "$dir" fetch --quiet 2>/dev/null
+    branch=$(git -C "$dir" symbolic-ref --short -q HEAD || echo "detached $(git -C "$dir" rev-parse --short HEAD)")
+    upstream=$(git -C "$dir" rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null) || upstream=
+    if [ -n "$upstream" ]; then
+        read -r behind ahead < <(git -C "$dir" rev-list --left-right --count '@{u}...HEAD')
+    fi
+    dirty=$(git -C "$dir" status --porcelain=v1 2>/dev/null)
+
+    local line="${B}${name}${N}  ${C}${branch}${N}"
+    if [ -z "$upstream" ]; then
+        line+="  ${Y}no upstream${N}"
+    else
+        line+="  ${D}${upstream}${N}"
+        [ "$ahead" -gt 0 ] && line+="  ${Y}${ahead} to push${N}"
+        [ "$behind" -gt 0 ] && line+="  ${R}${behind} behind${N}"
+    fi
+    if [ -n "$dirty" ]; then
+        line+="  ${R}$(printf '%s\n' "$dirty" | wc -l | tr -d ' ') uncommitted${N}"
+    fi
+    if [ "$ahead" -eq 0 ] && [ -z "$dirty" ] && [ -n "$upstream" ]; then
+        line+="  ${G}clean${N}"
+        pending=0
+    fi
+    echo "$line"
+    if [ "$ahead" -gt 0 ]; then
+        git -C "$dir" log --color=$COLOR --format="    %C(yellow)%h%Creset %s %C(dim)(%cr)%Creset" '@{u}..HEAD'
+    elif [ -z "$upstream" ]; then
+        git -C "$dir" log --color=$COLOR -5 --format="    %C(yellow)%h%Creset %s %C(dim)(%cr)%Creset"
+    fi
+    if [ -n "$dirty" ]; then
+        printf '%s\n' "$dirty" | head -15 | sed "s/^/    ${R}/; s/\$/${N}/"
+        [ "$(printf '%s\n' "$dirty" | wc -l)" -gt 15 ] && echo "    ${D}...${N}"
+    fi
+    [ $pending = 1 ]
+}
+
+if [ "$PICK" = 1 ]; then
+    command -v fzf >/dev/null || { echo "ai-changes: fzf missing" >&2; exit 1; }
+    pending=()
+    for r in "${REPOS[@]}"; do
+        d=$(repo_dir "$r")
+        FETCH=$FETCH report "$d" >/dev/null 2>&1 && pending+=("$d")
+    done
+    if [ ${#pending[@]} -eq 0 ]; then
+        echo "All repos clean and pushed."
+        read -rsn1 -p "press a key "
+        exit 0
+    fi
+    me=$(cd "$(dirname "$0")" && pwd)/$(basename "$0")
+    printf '%s\n' "${pending[@]}" | fzf --layout=reverse --ansi \
+        --prompt "repo > " --delimiter=/ --with-nth=-1 \
+        --header "enter vim :Review | ctrl-g lazygit | esc quit" \
+        --preview "FORCE_COLOR=1 '$me' {}; echo; git -C {} diff --stat --color=always '@{u}' 2>/dev/null || git -C {} diff --stat --color=always" \
+        --preview-window "right,65%,wrap,<120(down,60%,wrap)" \
+        --bind "enter:execute(cd {} && vim -c Review)" \
+        --bind "ctrl-g:execute(lazygit -p {})"
+    exit 0
+fi
+
+for r in "${REPOS[@]}"; do
+    report "$(repo_dir "$r")"
+    echo
+done
