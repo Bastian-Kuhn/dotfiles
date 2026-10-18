@@ -16,6 +16,13 @@ alias la='ls -LaFb'
 alias ll='ls -lFba --color'
 alias ve='source ENV/bin/activate'
 alias bve='python3 -m venv ENV && source ENV/bin/activate'
+
+# Git review (pager is delta, see ~/.gitconfig); ai-review, ai-changes and
+# ai-session live in ~/git/dotfiles/bin
+alias gd='git diff'
+alias gds='git diff --staged'
+alias gdu='git diff @{u}'
+alias glu='git log --oneline --decorate @{u}..'
 setopt histignorealldups
 setopt histignorespace
 setopt extended_history hist_reduce_blanks hist_verify share_history
