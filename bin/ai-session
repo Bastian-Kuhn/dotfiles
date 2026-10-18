@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# ai-session [repo]: tmux session for AI assisted coding in one repo.
+#
+#   +-------------------------+-------------+
+#   |                         |             |
+#   |  claude                 |  vim        |
+#   |                         |             |
+#   +-------------------------+-------------+
+#   |  shell                                |
+#   +---------------------------------------+
+#
+# repo: name below ~/git, a path, or nothing for the current directory.
+# An existing session of the same name is reused (attach or switch).
+
+set -e
+arg=${1:-$PWD}
+case $arg in
+    /*|.|./*|..|../*) dir=$arg ;;
+    *) if [ -d ~/git/"$arg" ]; then dir=~/git/$arg; else dir=$arg; fi ;;
+esac
+[ -d "$dir" ] || { echo "ai-session: no such directory: $dir" >&2; exit 1; }
+dir=$(cd "$dir" && pwd)
+# tmux session names must not contain . or :
+name=$(basename "$dir" | tr '.:' '__')
+
+if ! tmux has-session -t "=$name" 2>/dev/null; then
+    tmux new-session -d -s "$name" -n ai -c "$dir"
+    claude_pane=$(tmux display-message -p -t "=$name:" '#{pane_id}')
+    vim_pane=$(tmux split-window -h -l 40% -c "$dir" -t "$claude_pane" -P -F '#{pane_id}')
+    shell_pane=$(tmux split-window -v -f -l 20% -c "$dir" -t "$claude_pane" -P -F '#{pane_id}')
+    # send-keys instead of a pane command: the pane stays a shell when the program exits
+    tmux send-keys -t "$claude_pane" claude Enter
+    tmux send-keys -t "$vim_pane" vim Enter
+    tmux select-pane -t "$claude_pane"
+    : "$shell_pane"
+fi
+
+if [ -n "$TMUX" ]; then
+    tmux switch-client -t "=$name"
+else
+    tmux attach-session -t "=$name"
+fi
