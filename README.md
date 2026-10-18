@@ -32,6 +32,8 @@ but moved to <name>.bak-<date> first; links that are already correct are left al
 - zsh: Shell shows git branches, virtual envs etc
 
 ## AI review workflow
+
+Alle Tasten und Befehle auf einen Blick: [CHEATSHEET.md](CHEATSHEET.md).
 Tools: `brew install fzf git-delta lazygit`. Delta is the git pager (set in ~/.gitconfig, not in this repo).
 
 - `ai-session [repo]`: tmux session for a repo (name below ~/git or path): claude left, vim right, shell below. Reuses an existing session.
