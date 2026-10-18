@@ -1,6 +1,9 @@
 " Must come first: line continuations below need it (vim -es starts compatible)
 set nocompatible
 
+" Leader is space: backslash is taken by the make/f12 mapping below
+let mapleader = " "
+
 " Plugins (vim-plug). plug#end() also runs `filetype plugin indent on` and
 " `syntax enable`, so neither is set separately.
 call plug#begin()
@@ -9,6 +12,7 @@ Plug 'neoclide/coc.nvim', {'branch': 'release'}
 Plug '~/.vim/bundle/gruvbox'
 Plug '~/.vim/bundle/vim-airline'
 Plug '~/.vim/bundle/vim-fugitive'
+Plug 'airblade/vim-gitgutter'
 call plug#end()
 " ctrlp and nerdtree load natively from ~/.vim/pack/*/start
 
@@ -145,3 +149,144 @@ set guicursor=n-v-c:block-Cursor
 set guicursor+=i:ver100-iCursor
 set guicursor+=n-v-c:blinkon0
 set guicursor+=i:blinkwait10
+
+
+" Git review (fugitive + gitgutter)
+" Leader is <Space>.
+"   <leader>gs   git status (fugitive; s/u stage/unstage, = inline diff, cc commit)
+"   <leader>gd   side by side diff of this file against the index
+"   <leader>gD   side by side diff of this file against upstream (@{u})
+"   <leader>gl   log of this file (enter opens a commit)
+"   <leader>gL   log of the repo, graph
+"   <leader>gb   blame
+"   <leader>gr   :Review (everything not yet pushed, incl. uncommitted)
+"   ]h / [h      next / previous changed hunk
+"   <leader>hp   preview hunk     <leader>hu   undo hunk     <leader>hs   stage hunk
+"   ]q / [q      next / previous file of a :Review (or plain quickfix)
+"   <leader>gq   end the review: close the diff, keep the current file
+"
+" :Review [base] [head]
+"   Loads every file changed between base and head (default: work tree)
+"   into the quickfix list and shows each one as a side by side diff while
+"   stepping with ]q / [q. base defaults to @{u}, without upstream HEAD~1.
+"   :Review              unpushed commits plus uncommitted changes
+"   :Review HEAD~3       last three commits plus uncommitted changes
+"   :Review abc123~1 abc123   exactly one commit
+set diffopt+=vertical,algorithm:histogram
+set updatetime=300
+set signcolumn=yes
+let g:gitgutter_map_keys = 0
+
+nnoremap <leader>gs :Git<CR>
+nnoremap <leader>gd :Gvdiffsplit<CR>
+nnoremap <leader>gD :Gvdiffsplit @{u}<CR>
+nnoremap <leader>gl :Git log --oneline --decorate -- %<CR>
+nnoremap <leader>gL :Git log --oneline --decorate --graph<CR>
+nnoremap <leader>gb :Git blame<CR>
+nnoremap <leader>gr :Review<CR>
+nnoremap <leader>gq :call <SID>ReviewEnd()<CR>
+nmap ]h <Plug>(GitGutterNextHunk)
+nmap [h <Plug>(GitGutterPrevHunk)
+nmap <leader>hp <Plug>(GitGutterPreviewHunk)
+nmap <leader>hu <Plug>(GitGutterUndoHunk)
+nmap <leader>hs <Plug>(GitGutterStageHunk)
+nnoremap <silent> ]q :call <SID>ReviewStep('cnext')<CR>
+nnoremap <silent> [q :call <SID>ReviewStep('cprevious')<CR>
+
+function! s:Git(root, args) abort
+  return systemlist('git -C ' . shellescape(a:root) . ' ' . a:args)
+endfunction
+
+function! s:ReviewStart(...) abort
+  let root = trim(system('git rev-parse --show-toplevel'))
+  if v:shell_error
+    echohl ErrorMsg | echo 'Review: not inside a git repo' | echohl None | return
+  endif
+  let gitdir = trim(system('git -C ' . shellescape(root) . ' rev-parse --absolute-git-dir'))
+  let base = a:0 >= 1 ? a:1 : ''
+  if empty(base)
+    call s:Git(root, 'rev-parse --verify -q @{u}')
+    let base = v:shell_error ? 'HEAD~1' : '@{u}'
+  endif
+  let head = a:0 >= 2 ? a:2 : ''
+  let base_sha = get(s:Git(root, 'rev-parse --short --verify -q ' . shellescape(base . '^{commit}')), 0, '')
+  if v:shell_error || empty(base_sha)
+    echohl ErrorMsg | echo 'Review: unknown revision ' . base | echohl None | return
+  endif
+  let head_sha = ''
+  if !empty(head)
+    let head_sha = get(s:Git(root, 'rev-parse --short --verify -q ' . shellescape(head . '^{commit}')), 0, '')
+    if v:shell_error || empty(head_sha)
+      echohl ErrorMsg | echo 'Review: unknown revision ' . head | echohl None | return
+    endif
+  endif
+  let out = s:Git(root, 'diff --name-status ' . base_sha . (empty(head_sha) ? '' : ' ' . head_sha))
+  let items = []
+  let renamed = {}
+  for line in out
+    let parts = split(line, "\t")
+    let st = parts[0][0]
+    let file = parts[-1]
+    if st ==# 'D'
+      let name = FugitiveFind(base_sha . ':' . file, gitdir)
+    elseif empty(head_sha)
+      let name = root . '/' . file
+    else
+      let name = FugitiveFind(head_sha . ':' . file, gitdir)
+    endif
+    let text = st . ' ' . file
+    if st =~# '[RC]'
+      let renamed[name] = parts[1]
+      let text .= '  (from ' . parts[1] . ')'
+    endif
+    call add(items, {'filename': name, 'lnum': 1, 'text': text})
+  endfor
+  if empty(items)
+    echo 'Review: no changes between ' . base . ' and ' . (empty(head) ? 'the work tree' : head)
+    return
+  endif
+  let title = 'Review ' . base . ' (' . base_sha . ') .. ' . (empty(head) ? 'work tree' : head . ' (' . head_sha . ')')
+  call setqflist([], ' ', {'title': title, 'items': items})
+  let g:review = {'base': base_sha, 'renamed': renamed, 'qfid': getqflist({'id': 0}).id}
+  call s:ReviewStep('cfirst')
+endfunction
+
+function! s:ReviewActive() abort
+  return exists('g:review') && getqflist({'id': 0}).id == g:review.qfid
+endfunction
+
+function! s:ReviewStep(cmd) abort
+  if !s:ReviewActive()
+    try | execute a:cmd | catch /E553\|E42/ | echo 'no more items' | endtry
+    return
+  endif
+  diffoff!
+  silent! only
+  try
+    execute a:cmd
+  catch /E553/
+    echo 'Review: no more files'
+  endtry
+  let info = getqflist({'idx': 0, 'size': 0, 'items': 0})
+  let item = info.items[info.idx - 1]
+  if item.text[0] !=# 'A' && item.text[0] !=# 'D'
+    try
+      let from = get(g:review.renamed, bufname(item.bufnr), '')
+      execute 'Gvdiffsplit! ' . g:review.base . (empty(from) ? '' : ':' . fnameescape(from))
+    catch
+      echohl WarningMsg | echo 'Review: ' . v:exception | echohl None
+      return
+    endtry
+  endif
+  redraw
+  echo printf('Review %d/%d  %s   (]q next, [q prev, <leader>gq end)', info.idx, info.size, item.text)
+endfunction
+
+function! s:ReviewEnd() abort
+  diffoff!
+  silent! only
+  unlet! g:review
+  echo 'Review ended'
+endfunction
+
+command! -nargs=* Review call s:ReviewStart(<f-args>)
