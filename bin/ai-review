@@ -201,6 +201,10 @@ def _analyse(task):
         "ai_body": body,
         "newer_by": (newest.get("author_name")
                      if newest and last and newest is not last else None),
+        "thread": [{"author": c.get("author_name") or "?",
+                    "at": c.get("created_at"),
+                    "body": c.get("body") or "",
+                    "ai": _is_ai(c)} for c in comments],
         "hashes": hashes,
         "commits": found,
         "repo": repo,
@@ -299,8 +303,17 @@ def cmd_show(data, task_id):
         print(f"{DIM}no commit named, repo guess: {r['repo']}{RST}")
     if r["newer_by"]:
         print(f"{YEL}newer comment by {r['newer_by']} after the AI comment{RST}")
-    print("-" * min(width, 80))
-    print(_render(r["ai_body"] or "(no AI comment)", width))
+    thread = r.get("thread")
+    if not thread:  # cache written before the thread was stored
+        print("-" * min(width, 80))
+        print(_render(r["ai_body"] or "(no AI comment)", width))
+        return
+    # whole thread, newest first, so the latest reply sits at the top
+    for c in reversed(thread):
+        colour = GRN if c["ai"] else YEL
+        print(f"{colour}{'-' * 3} {c['author']}, {_age(c['at'])} ago {'-' * 3}{RST}")
+        print(_render(c["body"] or "(empty)", width))
+        print()
 
 
 def cmd_open(data, task_id):

@@ -7,7 +7,7 @@ und es in vim, git und tmux zu reviewen. In vim ist der Leader **Space**.
 
 | Befehl | Was es tut |
 |---|---|
-| `ai-review` | Offene Cairn Tasks mit Tag `Review AI Work`, Vorschau auf den letzten Claude Kommentar. Schreibt nur bei Kommentar, Schließen und Tag entfernen, nie mit dem Claude Token |
+| `ai-review` | Offene Cairn Tasks mit Tag `Review AI Work`, Vorschau auf den ganzen Kommentarverlauf, neuester oben. Schreibt nur bei Kommentar, Schließen und Tag entfernen, nie mit dem Claude Token |
 | `ai-review --print` | Gleiche Liste ohne fzf, als Text |
 | `ai-review --comment ID` | Kommentar in `$EDITOR` schreiben und posten (leer bricht ab) |
 | `ai-review --close ID` | Task erledigt setzen (fragt y/N) |
