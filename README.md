@@ -37,9 +37,12 @@ Alle Tasten und Befehle auf einen Blick: [CHEATSHEET.md](CHEATSHEET.md).
 Tools: `brew install fzf git-delta lazygit`. Delta is the git pager (set in ~/.gitconfig, not in this repo).
 
 - `ai-session [repo]`: tmux session for a repo (name below ~/git or path): claude left, vim right, shell below. Reuses an existing session.
-- `ai-review`: Cairn tasks tagged "Review AI Work" (read only). Preview shows the latest Claude comment.
-  Keys: enter opens the task in the browser, ctrl-o opens vim `:Review` on the commits named in the comment
-  (or on the unpushed work of the repo), ctrl-g lazygit, ctrl-r reload. `ai-review --print` for a plain list.
+- `ai-review`: Cairn tasks tagged "Review AI Work". Preview shows the latest Claude comment.
+  Keys: enter opens the task in Firefox, ctrl-o opens vim `:Review` on the commits named in the comment
+  (or on the unpushed work of the repo), ctrl-g lazygit, ctrl-t writes a comment in `$EDITOR` (empty aborts),
+  ctrl-x closes the task, alt-u drops the review tag (task stays open), ctrl-r reload. Close and untag ask y/N.
+  Writes use the token from `cairn login` (or `$CAIRN_TOKEN`) and refuse the Claude account's token.
+  `ai-review --print` for a plain list, `--comment|--close|--untag ID` without the picker.
 - `ai-changes`: per repo branch, to push, behind, uncommitted files and unpushed commits.
   `--fetch` fetches first, `--pick` is an fzf picker (enter vim `:Review`, ctrl-g lazygit). Repos: `$AI_REPOS`.
 - tmux: `prefix g` lazygit, `prefix R` ai-review, `prefix A` ai-changes --pick (all as popups).

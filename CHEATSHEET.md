@@ -7,8 +7,11 @@ und es in vim, git und tmux zu reviewen. In vim ist der Leader **Space**.
 
 | Befehl | Was es tut |
 |---|---|
-| `ai-review` | Offene Cairn Tasks mit Tag `Review AI Work`, Vorschau auf den letzten Claude Kommentar. Liest nur, ändert nichts in Cairn |
+| `ai-review` | Offene Cairn Tasks mit Tag `Review AI Work`, Vorschau auf den letzten Claude Kommentar. Schreibt nur bei Kommentar, Schließen und Tag entfernen, nie mit dem Claude Token |
 | `ai-review --print` | Gleiche Liste ohne fzf, als Text |
+| `ai-review --comment ID` | Kommentar in `$EDITOR` schreiben und posten (leer bricht ab) |
+| `ai-review --close ID` | Task erledigt setzen (fragt y/N) |
+| `ai-review --untag ID` | Tag `Review AI Work` entfernen, Task bleibt offen (fragt y/N) |
 | `ai-changes` | Pro Repo: Branch, ungepushte Commits, Rückstand, uncommittete Dateien |
 | `ai-changes --fetch` | Vorher `git fetch` in jedem Repo |
 | `ai-changes --pick` | fzf Auswahl der Repos mit offener Arbeit |
@@ -23,6 +26,9 @@ Repos für `ai-changes`: per Default cairn, Checkmk-Checks, cmdbsyncer, fmg-chec
 | `Enter` | Task im Browser öffnen |
 | `Ctrl-o` | vim `:Review` auf die im Kommentar genannten Commits (sonst die ungepushte Arbeit des Repos) |
 | `Ctrl-g` | lazygit im Repo |
+| `Ctrl-t` | Kommentar in `$EDITOR` schreiben und posten |
+| `Ctrl-x` | Task schließen (fragt y/N) |
+| `Alt-u` | Tag `Review AI Work` entfernen, Task bleibt offen (fragt y/N) |
 | `Ctrl-r` | Liste neu laden |
 | `Esc` | Beenden |
 

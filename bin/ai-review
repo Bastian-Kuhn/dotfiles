@@ -2,19 +2,26 @@
 """ai-review: what did AI hand back for review?
 
 Lists the open Cairn tasks tagged "Review AI Work" with the age of the
-latest Claude comment and the repo it touched. Read only: nothing on
-Cairn is changed by this tool.
+latest Claude comment and the repo it touched. Only --comment, --close
+and --untag write to Cairn, as the account the token belongs to; they
+refuse to run with the Claude account's token.
 
   ai-review            fzf picker (plain list without fzf or without a tty)
   ai-review --print    plain list
   ai-review --show ID  render the latest Claude comment of a task
   ai-review --open ID  open the task in the browser
   ai-review --vim ID   open vim in the repo on the commits the comment names
+  ai-review --comment ID  write a comment in $EDITOR and post it
+  ai-review --close ID    mark the task done (asks first)
+  ai-review --untag ID    drop the "Review AI Work" tag, task stays open
 
 Keys in the picker:
   enter   open the task in the browser
   ctrl-o  vim on the referenced commits (:Review), or on unpushed work
   ctrl-g  lazygit in the referenced repo
+  ctrl-t  write a comment ($EDITOR, empty file aborts)
+  ctrl-x  close the task (asks y/N)
+  alt-u   drop the review tag, task stays open (asks y/N)
   ctrl-r  reload from Cairn
   esc     quit
 
@@ -59,7 +66,7 @@ BOLD, DIM, YEL, GRN, CYA, RST = (
     if TTY else ("",) * 6)
 
 
-# ---- Cairn API (read only) ----
+# ---- Cairn API ----
 
 def _config():
     path = os.path.join(
@@ -91,6 +98,54 @@ def _get(host, token, path, params=None):
         sys.exit(f"ai-review: Cairn answered HTTP {exc.code} for {path}")
     except urllib.error.URLError as exc:
         sys.exit(f"ai-review: cannot reach {host}: {exc.reason}")
+
+
+def _send(host, token, method, path, payload=None):
+    """Write call; errors are printed, not fatal, so the picker survives."""
+    data = json.dumps(payload).encode() if payload is not None else None
+    req = urllib.request.Request(f"{host}/api/v1{path}", data=data, method=method,
+                                 headers={"Accept": "application/json",
+                                          "Content-Type": "application/json",
+                                          "Authorization": f"Bearer {token}"})
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            return json.load(resp)
+    except urllib.error.HTTPError as exc:
+        print(f"ai-review: Cairn answered HTTP {exc.code} for {method} {path}",
+              file=sys.stderr)
+    except urllib.error.URLError as exc:
+        print(f"ai-review: cannot reach {host}: {exc.reason}", file=sys.stderr)
+    return None
+
+
+def _writer():
+    """host, token and username for a write; never as the AI account."""
+    host, token = _config()
+    user = _get(host, token, "/me").get("username") or "?"
+    if user.lower() == AI_AUTHOR:
+        print(f"ai-review: the token belongs to '{user}' (CAIRN_TOKEN set?);"
+              " not writing as the AI account", file=sys.stderr)
+        return None
+    return host, token, user
+
+
+def _drop_cached(task_id):
+    """Take a task out of the cache so --show and --lines stop listing it."""
+    try:
+        with open(CACHE, encoding="utf-8") as fh:
+            data = json.load(fh)
+        data["rows"] = [r for r in data["rows"] if r["id"] != task_id]
+        with open(CACHE, "w", encoding="utf-8") as fh:
+            json.dump(data, fh)
+    except (OSError, ValueError, KeyError):
+        pass
+
+
+def _confirm(question):
+    try:
+        return input(f"{question} [y/N] ").strip().lower() in ("y", "yes", "j", "ja")
+    except EOFError:
+        return False
 
 
 # ---- data ----
@@ -250,8 +305,74 @@ def cmd_show(data, task_id):
 
 def cmd_open(data, task_id):
     r = _row(data, task_id)
-    opener = "open" if sys.platform == "darwin" else "xdg-open"
-    subprocess.run([opener, f"{data['host']}/tasks/{r['id']}"], check=False)
+    url = f"{data['host']}/tasks/{r['id']}"
+    if sys.platform == "darwin":
+        # Always Firefox, not the system default browser (Safari).
+        cmd = ["open", "-a", "Firefox", url]
+    else:
+        cmd = ["firefox", url]
+    subprocess.run(cmd, check=False)
+
+
+def _pause():
+    try:
+        input("press enter ")
+    except EOFError:
+        pass
+
+
+def cmd_comment(data, task_id):
+    r = _row(data, task_id)
+    w = _writer()
+    if not w:
+        return _pause()
+    host, token, user = w
+    fd, path = tempfile.mkstemp(prefix="ai-review-", suffix=".md")
+    os.close(fd)
+    editor = os.environ.get("EDITOR") or ("vim" if shutil.which("vim") else "vi")
+    try:
+        subprocess.run([*editor.split(), path], check=False)
+        with open(path, encoding="utf-8") as fh:
+            body = fh.read().strip()
+    finally:
+        os.unlink(path)
+    if not body:
+        print("empty comment, nothing posted")
+        return _pause()
+    if _send(host, token, "POST", f"/tasks/{r['id']}/comments", {"body": body}):
+        print(f"comment posted as {user}")
+    else:
+        _pause()
+
+
+def cmd_close(data, task_id):
+    r = _row(data, task_id)
+    w = _writer()
+    if not w:
+        return _pause()
+    host, token, user = w
+    if not _confirm(f"close '{r['title']}' as {user}?"):
+        return
+    if _send(host, token, "POST", f"/tasks/{r['id']}/complete"):
+        _drop_cached(r["id"])
+        print("task closed")
+    else:
+        _pause()
+
+
+def cmd_untag(data, task_id):
+    r = _row(data, task_id)
+    w = _writer()
+    if not w:
+        return _pause()
+    host, token, user = w
+    if not _confirm(f"drop tag '{TAG}' from '{r['title']}' as {user}?"):
+        return
+    if _send(host, token, "POST", f"/tasks/{r['id']}/tags", {"remove": [TAG]}):
+        _drop_cached(r["id"])
+        print("tag dropped")
+    else:
+        _pause()
 
 
 def _repo_dir(r):
@@ -294,6 +415,7 @@ def cmd_pick(data):
     me = os.path.abspath(sys.argv[0])
     lines = "\n".join(f"{r['id']}\t{_line(r)}" for r in data["rows"])
     header = ("enter browser | ctrl-o vim review | ctrl-g lazygit"
+              " | ctrl-t comment | ctrl-x close | alt-u untag"
               " | ctrl-r reload | esc quit\n"
               f"{'ID':<6}  {'AGE':>4}  {'REPO':<15} TITLE")
     subprocess.run([
@@ -305,6 +427,9 @@ def cmd_pick(data):
         "--bind", f"enter:execute-silent('{me}' --open {{1}})",
         "--bind", f"ctrl-o:execute('{me}' --vim {{1}})",
         "--bind", f"ctrl-g:execute('{me}' --lazygit {{1}})",
+        "--bind", f"ctrl-t:execute('{me}' --comment {{1}})+reload('{me}' --lines)",
+        "--bind", f"ctrl-x:execute('{me}' --close {{1}})+reload('{me}' --lines)",
+        "--bind", f"alt-u:execute('{me}' --untag {{1}})+reload('{me}' --lines)",
         "--bind", f"ctrl-r:reload('{me}' --lines)",
     ], input=lines, text=True, check=False)
 
@@ -314,12 +439,14 @@ def main(argv):
     if args and args[0] in ("-h", "--help"):
         print(__doc__.strip())
         return
-    if args and args[0] in ("--show", "--open", "--vim", "--lazygit"):
+    if args and args[0] in ("--show", "--open", "--vim", "--lazygit",
+                            "--comment", "--close", "--untag"):
         if len(args) < 2:
             sys.exit(f"ai-review: {args[0]} needs a task id")
         data = load(refresh=False)
         {"--show": cmd_show, "--open": cmd_open, "--vim": cmd_vim,
-         "--lazygit": cmd_lazygit}[args[0]](data, args[1])
+         "--lazygit": cmd_lazygit, "--comment": cmd_comment,
+         "--close": cmd_close, "--untag": cmd_untag}[args[0]](data, args[1])
         return
     data = load()
     if args and args[0] == "--lines":
