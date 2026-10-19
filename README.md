@@ -38,7 +38,7 @@ Tools: `brew install fzf git-delta lazygit`. Delta is the git pager (set in ~/.g
 
 - `ai-session [repo]`: tmux session for a repo (name below ~/git or path): claude left, vim right, shell below. Reuses an existing session.
 - `ai-review`: Cairn tasks tagged "Review AI Work". Preview shows the whole comment thread, newest first.
-  Keys: enter opens the task in Firefox, ctrl-o opens vim `:Review` on the commits named in the comment
+  Keys: enter opens the task in Firefox, ctrl-o opens vim `:Review` on the commits registered on the task (else those named in the comment)
   (or on the unpushed work of the repo), ctrl-g lazygit, ctrl-t writes a comment in `$EDITOR` (empty aborts),
   ctrl-x closes the task, alt-u drops the review tag (task stays open), ctrl-r reload. Close and untag ask y/N.
   Writes use the token from `cairn login` (or `$CAIRN_TOKEN`) and refuse the Claude account's token.

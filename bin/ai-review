@@ -173,7 +173,14 @@ def _analyse(task):
     hashes = [h for h in dict.fromkeys(HASH_RE.findall(body))
               if re.search(r"[a-f]", h) and re.search(r"[0-9]", h)]
     found, repo = [], None
-    for sha in hashes:
+    # commits registered on the task (cairn 9ff6d95) beat guessing from text
+    logged = [c for c in task.get("commits") or [] if c.get("repo") and c.get("sha")]
+    if logged:
+        repo = logged[-1]["repo"]
+        found = [c["sha"] for c in logged
+                 if c["repo"] == repo and _repo_has(repo, c["sha"])]
+        hashes = [c["sha"] for c in logged if c["repo"] == repo]
+    for sha in ([] if logged else hashes):
         for r in ([repo] if repo else []) + [r for r in REPOS if r != repo]:
             if _repo_has(r, sha):
                 repo = repo or r
