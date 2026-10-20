@@ -15,7 +15,7 @@ und es in vim, git und tmux zu reviewen. In vim ist der Leader **Space**.
 | `ai-changes` | Pro Repo: Branch, ungepushte Commits, Rückstand, uncommittete Dateien |
 | `ai-changes --fetch` | Vorher `git fetch` in jedem Repo |
 | `ai-changes --pick` | fzf Auswahl der Repos mit offener Arbeit |
-| `ai-session [repo]` | tmux Session: Claude links, vim rechts, Shell unten (bestehende wird wiederverwendet) |
+| `ai-session [repo]` | tmux Session: Claude links, `ai-review` rechts, Shell unten (bestehende wird wiederverwendet) |
 
 Repos für `ai-changes`: per Default cairn, Checkmk-Checks, cmdbsyncer, fmg-checks, dotfiles; über `$AI_REPOS` änderbar.
 

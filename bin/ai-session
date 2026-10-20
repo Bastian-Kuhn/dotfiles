@@ -1,15 +1,17 @@
 #!/usr/bin/env bash
 # ai-session [repo]: tmux session for AI assisted coding in one repo.
 #
-#   +-------------------------+-------------+
-#   |                         |             |
-#   |  claude                 |  vim        |
-#   |                         |             |
-#   +-------------------------+-------------+
-#   |  shell                                |
-#   +---------------------------------------+
+#   +--------------------+--------------------+
+#   |                    |                    |
+#   |  claude            |  ai-review         |
+#   |                    |                    |
+#   +--------------------+--------------------+
+#   |  shell                                  |
+#   +-----------------------------------------+
 #
 # repo: name below ~/git, a path, or nothing for the current directory.
+# ai-review lists all repos; its ctrl-o opens vim in that pane, esc leaves
+# a shell there (run ai-review again to get the list back).
 # An existing session of the same name is reused (attach or switch).
 
 set -e
@@ -26,11 +28,12 @@ name=$(basename "$dir" | tr '.:' '__')
 if ! tmux has-session -t "=$name" 2>/dev/null; then
     tmux new-session -d -s "$name" -n ai -c "$dir"
     claude_pane=$(tmux display-message -p -t "=$name:" '#{pane_id}')
-    vim_pane=$(tmux split-window -h -l 40% -c "$dir" -t "$claude_pane" -P -F '#{pane_id}')
+    review_pane=$(tmux split-window -h -l 50% -c "$dir" -t "$claude_pane" -P -F '#{pane_id}')
     shell_pane=$(tmux split-window -v -f -l 20% -c "$dir" -t "$claude_pane" -P -F '#{pane_id}')
     # send-keys instead of a pane command: the pane stays a shell when the program exits
     tmux send-keys -t "$claude_pane" claude Enter
-    tmux send-keys -t "$vim_pane" vim Enter
+    # 50% so the fzf preview still fits beside the list (side by side from 120 cols)
+    tmux send-keys -t "$review_pane" ai-review Enter
     tmux select-pane -t "$claude_pane"
     : "$shell_pane"
 fi
