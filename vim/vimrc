@@ -47,23 +47,8 @@ map <F12> :wa<CR>:make -j 8 -z 2>/dev/null ; f12<CR>
 imap <F12> <ESC>:wa<CR>:make -j 8 -z 2>/dev/null ; f12<CR>
 
 
-map <C-h> :call WinMove('h')<cr>
-map <C-j> :call WinMove('j')<cr>
-map <C-k> :call WinMove('k')<cr>
-map <C-l> :call WinMove('l')<cr>
-
-function! WinMove(key)
-    let t:curwin = winnr()
-    exec "wincmd ".a:key
-    if (t:curwin == winnr())
-        if (match(a:key,'[jk]'))
-            wincmd v
-        else
-            wincmd s
-        endif
-        exec "wincmd ".a:key
-    endif
-endfunction
+" Ctrl+h/j/k/l moves between vim splits and tmux panes (vim-tmux-navigator)
+let g:tmux_navigator_disable_when_zoomed = 1
 
 
 " Dateien erkennen

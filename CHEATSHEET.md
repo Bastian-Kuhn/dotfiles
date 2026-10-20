@@ -46,6 +46,12 @@ Repos für `ai-changes`: per Default cairn, Checkmk-Checks, cmdbsyncer, fmg-chec
 | `prefix g` | lazygit als Popup im aktuellen Verzeichnis |
 | `prefix R` | `ai-review` als Popup |
 | `prefix A` | `ai-changes --pick` als Popup |
+| `Ctrl-h/j/k/l` | Pane wechseln ohne Prefix, auch aus vim-Splits heraus |
+| `prefix Ctrl-l` | Bildschirm leeren (`Ctrl-l` ist jetzt Navigation) |
+| `Alt-h` / `Alt-l` | vorheriges / nächstes Window |
+| `Alt-1` … `Alt-9` | direkt zu Window N |
+
+Alt braucht in Terminal.app: Profil → Tastatur → „Wahltaste als Meta-Taste verwenden“.
 
 ## vim: Review
 
