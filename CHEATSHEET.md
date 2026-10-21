@@ -53,6 +53,19 @@ Repos für `ai-changes`: per Default cairn, Checkmk-Checks, cmdbsyncer, fmg-chec
 
 Alt braucht in Terminal.app: Profil → Tastatur → „Wahltaste als Meta-Taste verwenden“.
 
+## macOS Spaces (Voyager)
+
+Eigener Layer, gehalten mit einer Daumentaste; die Home Row schickt F-Tasten,
+auf die macOS (Tastaturkurzbefehle → Mission Control) ohne Modifier hört.
+
+| Taste | sendet | Aktion |
+|---|---|---|
+| Daumen + `h` / `l` | `F13` / `F14` | Space links / rechts |
+| Daumen + `a` `s` `d` `f` | `F16` … `F19` | Schreibtisch 1 … 4 |
+
+Gleiche Logik auf allen Ebenen: `Ctrl` + h/j/k/l für Panes, `Alt` + h/l für
+Windows, Daumen-Layer + h/l für Spaces.
+
 ## vim: Review
 
 | Befehl / Taste | Aktion |
