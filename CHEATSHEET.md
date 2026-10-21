@@ -92,6 +92,16 @@ Windows, Daumen-Layer + h/l für Spaces.
 | `Space hu` | Block rückgängig machen |
 | `Space hs` | Block stagen |
 
+## vim: Dateibaum
+
+| Befehl / Taste | Aktion |
+|---|---|
+| `vim` / `vim <dir>` | startet mit NERDTree links (bei `<dir>` auch `cd` dorthin) |
+| `:NERDTree` | Baum nachträglich öffnen |
+| `o` / `Enter` | Datei öffnen, Verzeichnis auf-/zuklappen |
+| `s` / `i` | Datei im vertikalen / horizontalen Split öffnen |
+| `?` | Hilfe im Baum |
+
 ## zsh
 
 | Alias | Aktion |

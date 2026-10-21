@@ -50,6 +50,17 @@ imap <F12> <ESC>:wa<CR>:make -j 8 -z 2>/dev/null ; f12<CR>
 " Ctrl+h/j/k/l moves between vim splits and tmux panes (vim-tmux-navigator)
 let g:tmux_navigator_disable_when_zoomed = 1
 
+" NERDTree on the left when vim starts without a file (`vim` or `vim <dir>`)
+" Its own Ctrl+j/k (jump to sibling) would shadow the navigator in the tree
+let g:NERDTreeMapJumpNextSibling = ''
+let g:NERDTreeMapJumpPrevSibling = ''
+autocmd StdinReadPre * let s:std_in = 1
+autocmd VimEnter * if argc() == 0 && !exists('s:std_in') | NERDTree | wincmd p | endif
+autocmd VimEnter * if argc() == 1 && isdirectory(argv()[0]) && !exists('s:std_in')
+    \ | exe 'cd ' . fnameescape(argv()[0]) | NERDTree | wincmd p | enew | endif
+" quit vim when NERDTree is the last window left
+autocmd BufEnter * if winnr('$') == 1 && exists('b:NERDTree') && b:NERDTree.isTabTree() | quit | endif
+
 
 " Dateien erkennen
 autocmd BufRead *.mk set syntax=python filetype=python
