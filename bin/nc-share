@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# Upload a file to Nextcloud and print a public share link (also copied to the clipboard).
+#
+# Needs an app password in the Keychain once:
+#   Nextcloud > Settings > Security > "Create new app password", then
+#   security add-generic-password -s nc-share -a bastian.kuhn -w '<app password>'
+
+NC_URL=${NC_URL:-https://box.kuhn-ruess.de}
+NC_USER=${NC_USER:-bastian.kuhn}
+NC_DIR=${NC_DIR:-Quickshare}
+
+if [ $# -ne 1 ] || [ ! -f "$1" ]; then
+    echo "Usage: $(basename "$0") <file>" >&2
+    exit 1
+fi
+
+pass=$(security find-generic-password -s nc-share -a "$NC_USER" -w 2>/dev/null)
+if [ -z "$pass" ]; then
+    echo "No app password in the Keychain, see the header of $0" >&2
+    exit 1
+fi
+
+name=$(basename "$1")
+remote="/$NC_DIR/$name"
+dav_path=$(python3 -Ic 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1]))' "$remote")
+
+# An existing file of the same name is overwritten (201 = created, 204 = replaced)
+status=$(curl -s -o /dev/null -w '%{http_code}' -u "$NC_USER:$pass" \
+    -T "$1" "$NC_URL/remote.php/dav/files/$NC_USER$dav_path")
+case $status in
+    201|204) ;;
+    *)   echo "Upload failed with HTTP $status" >&2; exit 1 ;;
+esac
+
+shares_api="$NC_URL/ocs/v2.php/apps/files_sharing/api/v1/shares"
+
+# Reuse an existing public link (share type 3) so overwriting keeps the old URL
+reply=$(curl -s -G -u "$NC_USER:$pass" -H 'OCS-APIRequest: true' \
+    --data-urlencode "path=$remote" -d format=json "$shares_api")
+link=$(python3 -Ic '
+import json, sys
+for share in json.load(sys.stdin)["ocs"]["data"]:
+    if share["share_type"] == 3:
+        print(share["url"])
+        break' <<<"$reply" 2>/dev/null)
+
+if [ -z "$link" ]; then
+    reply=$(curl -s -u "$NC_USER:$pass" -H 'OCS-APIRequest: true' \
+        --data-urlencode "path=$remote" -d shareType=3 "$shares_api?format=json")
+    link=$(python3 -Ic 'import json, sys; print(json.load(sys.stdin)["ocs"]["data"]["url"])' <<<"$reply" 2>/dev/null)
+fi
+if [ -z "$link" ]; then
+    echo "Creating the share failed: $reply" >&2
+    exit 1
+fi
+
+printf '%s' "$link" | pbcopy
+echo "$link"
